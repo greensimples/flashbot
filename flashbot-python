@@ -1,0 +1,45 @@
+from web3 import Web3, HTTPProvider
+from eth_account import Account
+from flashbots import Flashbots
+
+# Connect to the Ethereum network
+w3 = Web3(HTTPProvider("http://localhost:8545"))
+
+# Initialize Flashbots
+flashbots = Flashbots(w3, Account.create())
+
+# Your private key
+private_key = "your-private-key"
+
+# The at-risk address and the secure address
+at_risk_address = "0xYourAtRiskAddress"
+secure_address = "0xYourSecureAddress"
+
+# The contract address and ABI for the token you want to move
+token_contract_address = "0xTokenContractAddress"
+token_contract_abi = "TokenContractABI"
+
+# Create a contract object
+token_contract = w3.eth.contract(address=token_contract_address, abi=token_contract_abi)
+
+# The amount of tokens to move
+amount = 1000
+
+# Create a transaction that calls the token contract's transfer function
+transaction = token_contract.functions.transfer(secure_address, amount).buildTransaction({
+    'from': at_risk_address,
+    'nonce': w3.eth.getTransactionCount(at_risk_address),
+    'gas': 50000,
+    'gasPrice': w3.toWei('50', 'gwei')
+})
+
+# Sign the transaction with your private key
+signed_transaction = w3.eth.account.signTransaction(transaction, private_key)
+
+# Create a bundle with the signed transaction
+bundle = [
+    signed_transaction.rawTransaction.hex()
+]
+
+# Send the bundle via Flashbots
+flashbots.send_bundle(bundle, target_block_number=w3.eth.block_number + 10)
